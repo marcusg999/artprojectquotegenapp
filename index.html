@@ -1,0 +1,911 @@
+<html><head><base href=".">
+    <title>Art Shipping Estimate generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .calculator-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 36px;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        h3 {
+            font-size: 24px;
+            margin-bottom: 20px; 
+            color: #34495e;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+
+        button {
+            background: #2ecc71;
+            color: white;
+            padding: 15px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+            width: 100%;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .result {
+            margin-top: 40px;
+            padding: 30px;
+            background: #ecf0f1;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .artwork-preview {
+            width: 100%;
+            max-width: 400px;
+            height: 400px;
+            border: 2px dashed #bdc3c7;
+            margin: 30px auto;
+            position: relative;
+        }
+
+        .size-indicator {
+            position: absolute;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        @keyframes calculateAnimation {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .calculating {
+            animation: calculateAnimation 1s ease-in-out;
+        }
+
+        .site-visit-container,
+        .on-site-visit-container {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .site-visit-container input[type="checkbox"],
+        .on-site-visit-container input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .site-visit-container label,
+        .on-site-visit-container label {
+            display: inline;
+            margin: 0;
+        }
+
+        .artwork-item {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            position: relative;
+            background: #f9f9f9;
+        }
+
+        .remove-artwork {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .remove-artwork:hover {
+            background: #c0392b;
+        }
+
+        .add-artwork {
+            background: #3498db;
+            margin-bottom: 20px;
+        }
+
+        .add-artwork:hover {
+            background: #2980b9;
+        }
+
+        .artworks-container {
+            margin-bottom: 30px;
+        }
+
+        select[multiple] {
+            height: auto;
+            min-height: 120px;
+        }
+
+        select[multiple] option {
+            padding: 8px 12px;
+        }
+
+        .supplies-list {
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+        }
+
+        .supply-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .supply-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .supply-item label {
+            display: inline;
+            margin: 0;
+            flex: 1;
+        }
+
+        .quantity-input {
+            width: 100px !important;
+            padding: 8px !important;
+            margin-bottom: 0 !important;
+        }
+
+        .supply-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .pdf-button {
+            margin-top: 20px;
+            background: #e67e22;
+        }
+
+        .pdf-button:hover {
+            background: #d35400;
+        }
+
+        .night-mode .pdf-button {
+            background-color: #d35400;
+        }
+
+        .night-mode .pdf-button:hover {
+            background-color: #e67e22;
+        }
+
+        .additional-fees {
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .add-other-fee {
+            background: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+            display: inline-block;
+            width: auto;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .add-other-fee:hover {
+            background: #2980b9;
+        }
+
+        .other-fees-container {
+            margin-top: 15px;
+        }
+
+        .other-fee-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .fee-item {
+            margin-bottom: 20px;
+        }
+
+        .remove-fee {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .remove-fee:hover {
+            background: #c0392b;
+        }
+
+        .fee-name-input {
+            flex: 2;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .fee-name-input:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+
+        .other-fee-row input[type="number"] {
+            flex: 1;
+        }
+
+        .other-fee-row button.remove-fee {
+            flex: 0 0 auto;
+        }
+
+        .switch-container {
+            display: flex;
+          float: right;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .mode-label {
+            font-size: 18px;
+        }
+
+        body.night-mode {
+            background-color: #333;
+            color: #f5f5f5;
+        }
+
+        .night-mode .calculator-container {
+            background-color: #444;
+        }
+
+        .night-mode h1,
+        .night-mode h3,
+        .night-mode label {
+            color: #f5f5f5;
+        }
+
+        .night-mode input,
+        .night-mode select {
+            background-color: #555;
+            color: #f5f5f5;
+            border-color: #777;
+        }
+
+        .night-mode .result {
+            background-color: #555;
+        }
+
+        .night-mode .artwork-preview {
+            border-color: #777;
+        }
+
+        .night-mode .supplies-list {
+            background-color: #555;
+            border-color: #777;
+        }
+
+        .night-mode .artwork-item {
+            background-color: #555;
+        }
+
+        .night-mode .remove-artwork {
+            background-color: #c0392b;
+        }
+
+        .night-mode .remove-artwork:hover {
+            background-color: #e74c3c;
+        }
+
+        .night-mode .add-artwork {
+            background-color: #2980b9;
+        }
+
+        .night-mode .add-artwork:hover {
+            background-color: #3498db;
+        }
+
+        .night-mode .pdf-button {
+            background-color: #d35400;
+        }
+
+        .night-mode .pdf-button:hover {
+            background-color: #e67e22;
+        }
+
+        .night-mode .add-other-fee {
+            background-color: #2980b9;
+        }
+
+        .night-mode .add-other-fee:hover {
+            background-color: #3498db;
+        }
+
+        .night-mode .remove-fee {
+            background-color: #c0392b;
+        }
+
+        .night-mode .remove-fee:hover {
+            background-color: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .calculator-container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h3 {
+                font-size: 18px;
+            }
+
+            .artwork-preview {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .calculator-container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 18px;
+            }
+
+            h3 {
+                font-size: 16px;
+            }
+
+            input, select {
+                padding: 10px;
+            }
+
+            .artwork-preview {
+                height: 200px;
+            }
+
+            .result {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>Art Shipping Estimate generator</h1>
+
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="displayMode">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="mode-label">Day</span>
+                </div>
+        <div class="form-group">
+            <label>Project Title</label>
+            <input type="text" id="projectTitle">
+            <div class="form-group">
+                
+            </div>
+            <h3>Artworks</h3>
+            <div class="artworks-container" id="artworksContainer">
+                <div class="artwork-item">
+                    <button type="button" class="remove-artwork" onclick="removeArtwork(this)">&#xd7;</button>
+                    <label>Art Work Title</label>
+                    <input type="text">
+                    <label for="height-0">Height (inches):</label>
+                    <input type="number" class="height" id="height-0" min="0" step="0.1">
+                    <label for="length-0">Length (inches):</label>
+                    <input type="number" class="length" id="length-0" min="0" step="0.1">
+                    <label for="width-0">Width (inches):</label>
+                    <input type="number" class="width" id="width-0" min="0" step="0.1">
+                    <label for="weight-0">Weight (lbs):</label>
+                    <input type="number" class="weight" id="weight-0" min="0" step="0.1">
+                    <label for="artType-0">Artwork Type:</label>
+                    <select class="artType" id="artType-0">
+                        <option value="canvas">Canvas</option>
+                        <option value="sculpture">Sculpture</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <label for="material-0">Material:</label>
+                    <select class="material" id="material-0">
+                        <option value="oil">Oil Paint</option>
+                        <option value="acrylic">Acrylic</option>
+                        <option value="bronze">Bronze</option>
+                        <option value="marble">Marble</option>
+                        <option value="wood">Wood</option>
+                        <option value="mixed">Mixed Media</option>
+                    </select>
+                    <label for="texture-0">Surface Texture:</label>
+                    <select class="texture" id="texture-0">
+                        <option value="smooth">Smooth</option>
+                        <option value="textured">Textured</option>
+                        <option value="highly_textured">Highly Textured</option>
+                    </select>
+                </div>
+            </div>
+            <button type="button" class="add-artwork" onclick="addArtwork()">Add Another Artwork</button>
+        </div>
+
+        <div class="form-group">
+            <h3>Project Details</h3>
+            <div class="additional-fees">
+                <div class="fee-item">
+                    <label for="fuel_surcharge">Local Trucking Fuel Surcharge ($):</label>
+                    <input type="number" id="fuel_surcharge" min="0" step="0.01" value="0">
+                </div>
+                <div class="fee-item">
+                    <label for="safety_admin">Safety and Admin Fee ($):</label>
+                    <input type="number" id="safety_admin" min="0" step="0.01" value="0">
+                </div>
+                <div class="fee-item">
+                    <label for="warehouse_fee">Warehouse Fee ($):</label>
+                    <input type="number" id="warehouse_fee" min="0" step="0.01" value="0">
+                </div>
+                <div class="fee-item">
+                    <label for="transport_fee">Transport of Crated Work(s) ($):</label>
+                    <input type="number" id="transport_fee" min="0" step="0.01" value="0">
+                </div>
+                <div class="fee-item">
+                    <label for="export_docs">Export Documentation/Security Compliance ($):</label>
+                    <input type="number" id="export_docs" min="0" step="0.01" value="0">
+                </div>
+                <div class="fee-item">
+                    <label for="other_fee">Other:</label>
+                    <div class="other-fee-row">
+                        <input type="text" placeholder="Fee Description" class="fee-name-input">
+                        <input type="number" min="0" step="0.01" value="0" class="quantity-input">
+                        <button type="button" class="add-other-fee" onclick="addOtherFee()">Add Another</button>
+                    </div>
+                    <div id="other-fees-container" class="other-fees-container"></div>
+                </div>
+            </div>
+            <label for="days">Days to Complete:</label>
+            <input type="number" id="days" min="1" max="30">
+            <label for="techCount">Number of Technicians:</label>
+            <input type="number" id="techCount" min="1" max="10">
+            <label for="collection_date">Collection date/time desired:</label>
+            <input type="datetime-local" id="collection_date" min="1" max="30">
+            <label for="delivery_date">Delivery date/time desired:</label>
+            <input type="datetime-local" id="delivery_date" min="1" max="30">
+            <label for="supplies">Required Supplies:</label>
+            <div id="supplies" class="supplies-list">
+                <div class="supply-item">
+                    <input type="checkbox" id="bubble_wrap">
+                    <label for="bubble_wrap">Bubble Wrap ($25)</label>
+                    <input type="number" id="bubble_wrap_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="foam">
+                    <label for="foam">Foam Padding ($35)</label>
+                    <input type="number" id="foam_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="poly_plastic">
+                    <label for="poly_plastic">Poly Plastic per ft ($15)</label>
+                    <input type="number" id="poly_plastic_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="paper_tape">
+                    <label for="paper_tape">Paper Tape per roll ($15)</label>
+                    <input type="number" id="paper_tape_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="poly_tape">
+                    <label for="poly_tape">Poly Tape per roll ($15)</label>
+                    <input type="number" id="poly_tape_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="cardboard">
+                    <label for="cardboard">Cardboard Sheets ($35)</label>
+                    <input type="number" id="cardboard_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="plastic_wrap">
+                    <label for="plastic_wrap">Plastic Wrap ($20)</label>
+                    <input type="number" id="plastic_wrap_qty" min="0" value="0" class="quantity-input">
+                </div>
+                <div class="supply-item">
+                    <input type="checkbox" id="tyvek">
+                    <label for="tyvek">Tyvek, Durtek, Twill per ft ($30)</label>
+                    <input type="number" id="tyvek_qty" min="0" value="0" class="quantity-input">
+                </div>
+            </div>
+            <div class="site-visit-container">
+                <label for="OnsiteWrap">On Site Wrapping Required</label>
+                <input type="checkbox" id="OnsiteWrap">
+                <label for="siteVisit">Site Visit Required ($200)</label>
+                <input type="checkbox" id="siteVisit">
+            </div>
+        </div>
+        <button onclick="calculateCost()">Calculate Shipping Cost</button>
+
+        <div class="result" id="result">
+            <h3>Estimated Costs</h3>
+            <p><strong>Project Title:</strong> <span id="projectTitleDisplay"></span></p>
+            <div id="itemizedCosts">
+                <p><strong>Artworks:</strong></p>
+                <ul id="artworkTitles"></ul>
+                <p>Labor:</p>
+                <ul id="laborItems"></ul>
+                <p>Materials:</p>  
+                <ul id="materialsItems"></ul>
+                <p>Crate:</p>
+                <ul>
+                    <li>Crate Size: <span id="crateSize"></span></li>
+                    <li>Crate Cost: $<span id="crateCost">0.00</span></li>
+                </ul>
+                <p>Additional Fees:</p>
+                <ul>
+                    <li>Local Trucking Fuel Surcharge: $<span id="fuelSurchargeCost">0.00</span></li>  
+                    <li>Safety and Admin Fee: $<span id="safetyAdminCost">0.00</span></li>
+                    <li>Warehouse Fee: $<span id="warehouseFeeCost">0.00</span></li>
+                    <li>Transport of Crated Work(s): $<span id="transportFeeCost">0.00</span></li>  
+                    <li>Export Documentation/Security Compliance: $<span id="exportDocsCost">0.00</span></li>
+                    <li id="siteVisitItem">Site Visit Fee: $<span id="siteVisitCost">0.00</span></li>
+                    <div id="otherFeeItems"></div>
+                </ul>
+            </div>
+            <p id="totalCost"></p>
+            <div class="artwork-preview" id="preview"></div>
+            <button onclick="saveAsPDF()" class="pdf-button">Save as PDF</button>
+        </div>
+    </div>
+
+    <script>
+    let artworkCount = 1;
+    let otherFeeCount = 1;
+    function addArtwork() {
+      const container = document.getElementById('artworksContainer');
+      const newArtwork = document.createElement('div');
+      newArtwork.classList.add('artwork-item');
+      newArtwork.innerHTML = `
+                    <button type="button" class="remove-artwork" onclick="removeArtwork(this)">&#xd7;</button>
+                    <label>Art Work Title</label>
+                    <input type="text">
+                    <label for="height-${artworkCount}">Height (inches):</label>
+                    <input type="number" class="height" id="height-${artworkCount}" min="0" step="0.1">
+                    <label for="length-${artworkCount}">Length (inches):</label>
+                    <input type="number" class="length" id="length-${artworkCount}" min="0" step="0.1">
+                    <label for="width-${artworkCount}">Width (inches):</label>
+                    <input type="number" class="width" id="width-${artworkCount}" min="0" step="0.1">
+                    <label for="weight-${artworkCount}">Weight (lbs):</label>
+                    <input type="number" class="weight" id="weight-${artworkCount}" min="0" step="0.1">
+                    <label for="artType-${artworkCount}">Artwork Type:</label>
+                    <select class="artType" id="artType-${artworkCount}">
+                        <option value="canvas">Canvas</option>
+                        <option value="sculpture">Sculpture</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <label for="material-${artworkCount}">Material:</label>
+                    <select class="material" id="material-${artworkCount}">
+                        <option value="oil">Oil Paint</option>
+                        <option value="acrylic">Acrylic</option>
+                        <option value="bronze">Bronze</option>
+                        <option value="marble">Marble</option>
+                        <option value="wood">Wood</option>
+                        <option value="mixed">Mixed Media</option>
+                    </select>
+                    <label for="texture-${artworkCount}">Surface Texture:</label>
+                    <select class="texture" id="texture-${artworkCount}">
+                        <option value="smooth">Smooth</option>
+                        <option value="textured">Textured</option>
+                        <option value="highly_textured">Highly Textured</option>
+                    </select>
+                `;
+      container.appendChild(newArtwork);
+      artworkCount++;
+    }
+    function removeArtwork(button) {
+      button.parentNode.remove();
+    }
+    function addOtherFee() {
+      const container = document.getElementById('other-fees-container');
+      const newFee = document.createElement('div');
+      newFee.classList.add('other-fee-row');
+      newFee.innerHTML = `
+                    <input type="text" placeholder="Fee Description" class="fee-name-input">
+                    <input type="number" min="0" step="0.01" value="0" class="quantity-input">
+                    <button type="button" class="remove-fee" onclick="removeFee(this)">Remove</button>
+                `;
+      container.appendChild(newFee);
+      otherFeeCount++;
+    }
+    function removeFee(button) {
+      button.parentNode.remove();
+    }
+    function calculateCost() {
+      const artworks = document.querySelectorAll('.artwork-item');
+      const crateSize = document.getElementById('crateSize');
+      const laborItems = document.getElementById('laborItems');
+      const materialsItems = document.getElementById('materialsItems');
+      const otherFeeItems = document.getElementById('otherFeeItems');
+      const totalCost = document.getElementById('totalCost');
+      laborItems.innerHTML = '';
+      materialsItems.innerHTML = '';
+      otherFeeItems.innerHTML = '';
+      let totalMaterialsCost = 0;
+      const fuelSurcharge = parseFloat(document.getElementById('fuel_surcharge').value);
+      const safetyAdmin = parseFloat(document.getElementById('safety_admin').value);
+      const warehouseFee = parseFloat(document.getElementById('warehouse_fee').value);
+      const transportFee = parseFloat(document.getElementById('transport_fee').value);
+      const exportDocs = parseFloat(document.getElementById('export_docs').value);
+      const siteVisitFee = document.getElementById('siteVisit').checked ? 200 : 0;
+      const projectTitle = document.getElementById('projectTitle').value;
+      document.getElementById('projectTitleDisplay').textContent = projectTitle;
+      const artworkTitles = document.getElementById('artworkTitles');
+      artworkTitles.innerHTML = '';
+      artworks.forEach((artwork, index) => {
+        const artworkTitle = artwork.querySelector('input[type="text"]').value;
+        const titleItem = document.createElement('li');
+        titleItem.textContent = `Artwork ${index + 1}: ${artworkTitle}`;
+        artworkTitles.appendChild(titleItem);
+        const height = parseFloat(artwork.querySelector('.height').value);
+        const length = parseFloat(artwork.querySelector('.length').value);
+        const width = parseFloat(artwork.querySelector('.width').value);
+        const weight = parseFloat(artwork.querySelector('.weight').value);
+        const materialsCostPerArtwork = calculateMaterialsCost(height, length, width, weight);
+        const materialsItem = document.createElement('li');
+        materialsItem.textContent = `Artwork ${index + 1}: $${materialsCostPerArtwork.toFixed(2)}`;
+        materialsItems.appendChild(materialsItem);
+        totalMaterialsCost += materialsCostPerArtwork;
+      });
+      document.querySelectorAll('.other-fee-row').forEach(row => {
+        const name = row.querySelector('.fee-name-input').value;
+        const cost = parseFloat(row.querySelector('.quantity-input').value);
+        const otherFeeItem = document.createElement('li');
+        otherFeeItem.innerHTML = `${name}: $<span>${cost.toFixed(2)}</span>`;
+        otherFeeItems.appendChild(otherFeeItem);
+      });
+      document.getElementById('fuelSurchargeCost').textContent = fuelSurcharge.toFixed(2);
+      document.getElementById('safetyAdminCost').textContent = safetyAdmin.toFixed(2);
+      document.getElementById('warehouseFeeCost').textContent = warehouseFee.toFixed(2);
+      document.getElementById('transportFeeCost').textContent = transportFee.toFixed(2);
+      document.getElementById('exportDocsCost').textContent = exportDocs.toFixed(2);
+      document.getElementById('siteVisitCost').textContent = siteVisitFee.toFixed(2);
+      document.getElementById('siteVisitItem').style.display = siteVisitFee > 0 ? 'list-item' : 'none';
+      const techCount = parseInt(document.getElementById('techCount').value);
+      const days = parseInt(document.getElementById('days').value);
+      const hoursPerDay = 8;
+      const hourlyRate = 50;
+      const laborCost = techCount * days * hoursPerDay * hourlyRate;
+      const laborItem = document.createElement('li');
+      laborItem.textContent = `Labor: $${laborCost.toFixed(2)}`;
+      laborItems.appendChild(laborItem);
+      const crateSizeText = calculateCrateSize(artworks);
+      const crateCost = calculateCrateCost(crateSizeText);
+      crateSize.textContent = crateSizeText;
+      document.getElementById('crateCost').textContent = crateCost.toFixed(2);
+      const total = laborCost + totalMaterialsCost + crateCost + fuelSurcharge + safetyAdmin + warehouseFee + transportFee + exportDocs + siteVisitFee;
+      totalCost.textContent = `Total Estimated Cost: $${total.toFixed(2)}`;
+      document.getElementById('result').style.display = 'block';
+    }
+    function calculateMaterialsCost(height, length, width, weight) {
+      return height * length * width * weight * 0.005;
+    }
+    function calculateCrateSize(artworks) {
+      let maxHeight = 0;
+      let maxLength = 0;
+      let maxWidth = 0;
+      let totalVolume = 0;
+      const PADDING = {
+        STANDARD: 4,
+        FRAGILE: 6,
+        WALL_THICKNESS: 0.75
+      };
+      artworks.forEach(artwork => {
+        const height = parseFloat(artwork.querySelector('.height').value) || 0;
+        const length = parseFloat(artwork.querySelector('.length').value) || 0;
+        const width = parseFloat(artwork.querySelector('.width').value) || 0;
+        const artType = artwork.querySelector('.artType').value;
+        const texture = artwork.querySelector('.texture').value;
+        let requiredPadding = PADDING.STANDARD;
+        if (artType === 'sculpture' || texture === 'highly_textured') {
+          requiredPadding = PADDING.FRAGILE;
+        }
+        const paddedHeight = height + requiredPadding * 2 + PADDING.WALL_THICKNESS * 2;
+        const paddedLength = length + requiredPadding * 2 + PADDING.WALL_THICKNESS * 2;
+        const paddedWidth = width + requiredPadding * 2 + PADDING.WALL_THICKNESS * 2;
+        maxHeight = Math.max(maxHeight, paddedHeight);
+        maxLength = Math.max(maxLength, paddedLength);
+        maxWidth = Math.max(maxWidth, paddedWidth);
+        const volume = height * length * width;
+        totalVolume += volume;
+      });
+      maxHeight = Math.ceil(maxHeight);
+      maxLength = Math.ceil(maxLength);
+      maxWidth = Math.ceil(maxWidth);
+      const crateVolume = maxHeight * maxLength * maxWidth;
+      const volumeEfficiency = totalVolume / crateVolume;
+      if (volumeEfficiency < 0.3 && artworks.length > 1) {
+        const cubeRoot = Math.ceil(Math.cbrt(totalVolume * 2));
+        maxHeight = Math.max(maxHeight, cubeRoot);
+        maxLength = Math.max(maxLength, cubeRoot);
+        maxWidth = Math.max(maxWidth, cubeRoot);
+      }
+      const MINIMUM_SIZE = 12;
+      maxHeight = Math.max(maxHeight, MINIMUM_SIZE);
+      maxLength = Math.max(maxLength, MINIMUM_SIZE);
+      maxWidth = Math.max(maxWidth, MINIMUM_SIZE);
+      return `${maxHeight}" × ${maxLength}" × ${maxWidth}"`;
+    }
+    function calculateCrateCost(crateSize) {
+      const dimensions = crateSize.split(' × ');
+      const height = parseFloat(dimensions[0]);
+      const length = parseFloat(dimensions[1]);
+      const width = parseFloat(dimensions[2]);
+      const volume = height * length * width;
+      return volume * 0.05;
+    }
+    function saveAsPDF() {
+      const doc = new jspdf.jsPDF();
+      const result = document.getElementById('result');
+      doc.html(result, {
+        callback: function (doc) {
+          doc.save('art_shipping_estimate.pdf');
+        },
+        x: 15,
+        y: 15
+      });
+    }
+    function toggleDisplayMode() {
+      document.body.classList.toggle('night-mode');
+      const modeLabel = document.querySelector('.mode-label');
+      modeLabel.textContent = document.body.classList.contains('night-mode') ? 'Night' : 'Day';
+    }
+    document.getElementById('displayMode').addEventListener('change', toggleDisplayMode);
+    </script>
+</body>
+</html>
